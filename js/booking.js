@@ -87,6 +87,7 @@ function renderServices() {
   container.innerHTML = state.services.map(s => `
     <button class="service-btn" data-id="${s.id}" onclick="selectService('${s.id}')">
       <span class="name">${s.name}</span>
+      <span class="price">R$ ${Number(s.price).toFixed(0)}</span>
       <span class="duration">${s.duration_minutes} min</span>
     </button>
   `).join('');

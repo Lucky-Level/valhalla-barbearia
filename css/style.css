@@ -79,16 +79,18 @@ body {
 
 /* Service selector */
 .service-options {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 10px;
 }
 
 .service-btn {
-  flex: 1;
-  background: var(--bg);
+  background: rgba(26, 38, 24, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 2px solid var(--border);
   border-radius: var(--radius);
-  padding: 16px 12px;
+  padding: 14px 10px;
   color: var(--text);
   cursor: pointer;
   text-align: center;
@@ -106,13 +108,21 @@ body {
 
 .service-btn .name {
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   display: block;
   margin-bottom: 4px;
 }
 
+.service-btn .price {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent);
+  display: block;
+  margin-top: 2px;
+}
+
 .service-btn .duration {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   color: var(--text-muted);
 }
 

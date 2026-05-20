@@ -8,13 +8,20 @@ create table valhalla_services (
   name text not null,
   duration_minutes int not null,
   interval_minutes int not null default 10,
+  price decimal(10,2),
   price_note text
 );
 
--- Seed dos servicos (adaptar conforme a barbearia)
-insert into valhalla_services (name, duration_minutes, interval_minutes, price_note) values
-  ('Corte', 30, 10, 'Pix ou Dinheiro'),
-  ('Corte + Barba', 60, 10, 'Pix ou Dinheiro');
+-- Servicos reais da Valhalla Barbearia
+insert into valhalla_services (name, duration_minutes, interval_minutes, price, price_note) values
+  ('Corte',             30, 10, 35.00, 'Pix ou Dinheiro'),
+  ('Barba',             30, 10, 35.00, 'Pix ou Dinheiro'),
+  ('Combo Corte+Barba', 60, 10, 60.00, 'Pix ou Dinheiro'),
+  ('Sobrancelha',       15, 5,  15.00, 'Pix ou Dinheiro'),
+  ('Hidratacao',        20, 5,  15.00, 'Pix ou Dinheiro'),
+  ('Relaxamento',       40, 10, 40.00, 'Pix ou Dinheiro'),
+  ('Pe do Cabelo',      10, 5,   7.00, 'Pix ou Dinheiro'),
+  ('Corte Maquina',     20, 5,  20.00, 'Pix ou Dinheiro');
 
 -- Blocos de disponibilidade (admin define por dia)
 create table valhalla_availability (
