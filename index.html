@@ -305,39 +305,52 @@
 
     // --- PWA Install Banner ---
     let deferredPrompt = null;
+    let promptFired = false;
 
-    // Capture Android install prompt
+    // Capture Chrome/Edge/Samsung install prompt
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredPrompt = e;
-      showInstallBanner('android');
+      promptFired = true;
+      showInstallBanner('android-native');
     });
 
     function showInstallBanner(platform) {
       // Don't show if already installed (standalone) or dismissed
       if (window.matchMedia('(display-mode: standalone)').matches) return;
       if (navigator.standalone) return;
-      if (sessionStorage.getItem('vb_install_dismissed')) return;
+      if (localStorage.getItem('vb_install_dismissed')) return;
 
       const banner = document.getElementById('install-banner');
       const title = document.getElementById('install-title');
       const instructions = document.getElementById('install-instructions');
 
-      if (platform === 'android') {
-        title.textContent = 'Instalar o app';
-        instructions.innerHTML = 'Toque em <strong>"Instalar"</strong> para adicionar a tela inicial.';
-        // Add install button for Android
-        const existingBtn = banner.querySelector('.install-btn');
-        if (!existingBtn) {
-          const btn = document.createElement('button');
-          btn.className = 'install-btn';
-          btn.textContent = 'Instalar';
-          btn.onclick = installPWA;
-          banner.insertBefore(btn, banner.querySelector('.install-banner-close'));
+      // Remove old install button if exists
+      const oldBtn = banner.querySelector('.install-btn');
+      if (oldBtn) oldBtn.remove();
+
+      if (platform === 'android-native') {
+        // Chrome, Edge, Samsung Internet — suportam beforeinstallprompt
+        title.textContent = 'Instalar Valhalla Barbearia';
+        instructions.innerHTML = 'Acesse rapido direto da tela inicial.';
+        const btn = document.createElement('button');
+        btn.className = 'install-btn';
+        btn.textContent = 'Instalar';
+        btn.onclick = installPWA;
+        banner.insertBefore(btn, banner.querySelector('.install-banner-close'));
+      } else if (platform === 'android-manual') {
+        // Xiaomi MIUI Browser, Firefox, Opera etc — sem beforeinstallprompt
+        title.textContent = 'Adicionar a tela inicial';
+        const ua = navigator.userAgent.toLowerCase();
+        if (ua.includes('firefox') || ua.includes('fxios')) {
+          instructions.innerHTML = 'Toque no menu <strong>(3 pontinhos)</strong> e depois em <strong>"Instalar"</strong>.';
+        } else {
+          // Xiaomi Mi Browser, Opera, outros
+          instructions.innerHTML = 'Abra no <strong>Chrome</strong> para instalar, ou toque no menu <strong>(3 pontinhos)</strong> e em <strong>"Adicionar a tela inicial"</strong>.';
         }
       } else if (platform === 'ios') {
         title.textContent = 'Adicionar a tela inicial';
-        instructions.innerHTML = 'No Safari, toque em <strong>Compartilhar</strong> (icone de seta) e depois em <strong>"Adicionar a Tela de Inicio"</strong>.';
+        instructions.innerHTML = 'Toque em <strong>Compartilhar</strong> (icone de seta) e depois em <strong>"Adicionar a Tela de Inicio"</strong>.';
       }
 
       banner.classList.remove('hidden');
@@ -350,20 +363,33 @@
       deferredPrompt = null;
       if (outcome === 'accepted') {
         document.getElementById('install-banner').classList.add('hidden');
+        localStorage.setItem('vb_install_dismissed', '1');
       }
     }
 
     function dismissInstallBanner() {
       document.getElementById('install-banner').classList.add('hidden');
-      sessionStorage.setItem('vb_install_dismissed', '1');
+      localStorage.setItem('vb_install_dismissed', '1');
     }
 
-    // Detect iOS Safari (no beforeinstallprompt)
+    // Detect platform and show appropriate banner
     window.addEventListener('load', () => {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-      const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome|CriOS|FxiOS/.test(navigator.userAgent);
+      const ua = navigator.userAgent;
+      const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+      const isAndroid = /Android/.test(ua);
+      const isSafari = /Safari/.test(ua) && !/Chrome|CriOS|FxiOS/.test(ua);
+
       if (isIOS && isSafari) {
+        // iOS Safari — instrucao manual
         setTimeout(() => showInstallBanner('ios'), 2000);
+      } else if (isAndroid && !promptFired) {
+        // Android sem beforeinstallprompt (Xiaomi Mi Browser, Firefox, Opera...)
+        // Espera 3s pra dar tempo do beforeinstallprompt disparar primeiro
+        setTimeout(() => {
+          if (!promptFired) {
+            showInstallBanner('android-manual');
+          }
+        }, 3000);
       }
     });
   </script>
