@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#1A2618"/>
+  <g transform="translate(256,256)">
+    <!-- Viking helmet -->
+    <path d="M-80,-20 Q-80,-90 0,-100 Q80,-90 80,-20 L60,10 Q0,30 -60,10 Z" fill="none" stroke="#C9A96E" stroke-width="12"/>
+    <!-- Horns -->
+    <path d="M-70,-50 Q-120,-100 -100,-140" fill="none" stroke="#C9A96E" stroke-width="14" stroke-linecap="round"/>
+    <path d="M70,-50 Q120,-100 100,-140" fill="none" stroke="#C9A96E" stroke-width="14" stroke-linecap="round"/>
+    <!-- Eye slit -->
+    <line x1="-50" y1="-20" x2="50" y2="-20" stroke="#C9A96E" stroke-width="8"/>
+    <!-- Nose guard -->
+    <line x1="0" y1="-40" x2="0" y2="10" stroke="#C9A96E" stroke-width="8"/>
+    <!-- V letter below -->
+    <text x="0" y="80" text-anchor="middle" font-family="serif" font-weight="bold" font-size="60" fill="#C9A96E">V</text>
+  </g>
+</svg>

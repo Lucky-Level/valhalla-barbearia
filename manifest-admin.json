@@ -1,0 +1,23 @@
+{
+  "name": "Valhalla Barbearia - Admin",
+  "short_name": "VB Admin",
+  "description": "Painel de controle - Valhalla Barbearia",
+  "start_url": "/admin.html",
+  "display": "standalone",
+  "background_color": "#1A2618",
+  "theme_color": "#1A2618",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

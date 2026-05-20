@@ -1,0 +1,23 @@
+{
+  "name": "Valhalla Barbearia",
+  "short_name": "Valhalla",
+  "description": "Agende seu corte na Valhalla Barbearia - Goiania",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1A2618",
+  "theme_color": "#1A2618",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

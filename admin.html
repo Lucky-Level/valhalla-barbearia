@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1A2618">
+  <title>Admin - Valhalla Barbearia</title>
+  <link rel="manifest" href="manifest-admin.json">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Login -->
+    <div id="login-screen" class="admin-login">
+      <h1 style="color: var(--accent); margin-bottom: 24px;">Admin</h1>
+      <div class="form-group">
+        <input type="password" id="password-input" placeholder="Senha" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="btn btn-primary" onclick="doLogin()">Entrar</button>
+      <p id="login-error" class="hidden" style="color: var(--danger); margin-top: 12px; font-size: 0.85rem;"></p>
+    </div>
+
+    <!-- Admin panel -->
+    <div id="admin-panel" class="hidden">
+      <div class="header">
+        <h1>Valhalla Barbearia</h1>
+        <p>Painel de controle</p>
+      </div>
+
+      <div class="tab-bar">
+        <button class="tab active" data-tab="availability" onclick="switchTab('availability')">Horarios</button>
+        <button class="tab" data-tab="appointments" onclick="switchTab('appointments')">Agendamentos</button>
+        <button class="tab" data-tab="products" onclick="switchTab('products')">Produtos</button>
+        <button class="tab" data-tab="orders" onclick="switchTab('orders')">Encomendas</button>
+        <button class="tab" data-tab="followup" onclick="switchTab('followup')">Follow-up</button>
+      </div>
+
+      <!-- Tab: Availability -->
+      <div id="tab-availability">
+        <div class="card">
+          <h2>Adicionar disponibilidade</h2>
+          <div class="form-group">
+            <label>Data</label>
+            <input type="date" id="av-date">
+          </div>
+          <div style="display:flex; gap:10px;">
+            <div class="form-group" style="flex:1">
+              <label>Inicio</label>
+              <input type="time" id="av-start" value="09:00">
+            </div>
+            <div class="form-group" style="flex:1">
+              <label>Fim</label>
+              <input type="time" id="av-end" value="18:00">
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="addAvailability()">Adicionar</button>
+        </div>
+
+        <div class="card">
+          <h2>Proximos dias disponiveis</h2>
+          <ul class="avail-list" id="avail-list"></ul>
+          <p id="avail-empty" class="empty-state hidden">Nenhuma disponibilidade cadastrada.</p>
+        </div>
+      </div>
+
+      <!-- Tab: Appointments -->
+      <div id="tab-appointments" class="hidden">
+        <div class="card">
+          <h2>Filtrar por data</h2>
+          <div class="form-group">
+            <input type="date" id="apt-filter-date" onchange="loadAppointments()">
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Agendamentos</h2>
+          <div id="apt-list"></div>
+          <p id="apt-empty" class="empty-state hidden">Nenhum agendamento nesta data.</p>
+        </div>
+      </div>
+
+      <!-- Tab: Products -->
+      <div id="tab-products" class="hidden">
+        <div class="card">
+          <h2>Adicionar produto</h2>
+          <div class="form-group">
+            <label>Nome</label>
+            <input type="text" id="prod-name" placeholder="Ex: Perfume X">
+          </div>
+          <div class="form-group">
+            <label>Descricao</label>
+            <input type="text" id="prod-desc" placeholder="Descricao curta">
+          </div>
+          <div class="form-group">
+            <label>Preco (R$)</label>
+            <input type="number" id="prod-price" step="0.01" placeholder="25.00">
+          </div>
+          <div class="form-group">
+            <label>Imagem do produto</label>
+            <div style="display:flex; gap:8px; margin-bottom:8px;">
+              <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('prod-image-camera').click()">Tirar foto</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('prod-image-gallery').click()">Galeria</button>
+            </div>
+            <input type="file" id="prod-image-camera" accept="image/*" capture="environment" class="file-input hidden" onchange="handleImageSelect(this)">
+            <input type="file" id="prod-image-gallery" accept="image/*" class="file-input hidden" onchange="handleImageSelect(this)">
+            <div id="prod-image-preview" class="image-preview hidden"></div>
+          </div>
+          <button class="btn btn-primary" onclick="addProduct()">Adicionar produto</button>
+        </div>
+
+        <div class="card">
+          <h2>Produtos cadastrados</h2>
+          <div id="products-list"></div>
+          <p id="products-empty" class="empty-state hidden">Nenhum produto cadastrado.</p>
+        </div>
+      </div>
+
+      <!-- Tab: Orders -->
+      <div id="tab-orders" class="hidden">
+        <div class="card">
+          <h2>Encomendas</h2>
+          <div id="orders-list"></div>
+          <p id="orders-empty" class="empty-state hidden">Nenhuma encomenda.</p>
+        </div>
+      </div>
+
+      <!-- Tab: Follow-up -->
+      <div id="tab-followup" class="hidden">
+        <div class="card">
+          <h2>Cronograma de follow-up</h2>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">
+            Clientes ordenados por urgencia. Vermelho = atrasado, Amarelo = proximo, Verde = em dia.
+          </p>
+          <div id="followup-list"></div>
+          <p id="followup-empty" class="empty-state hidden">Nenhum cliente com frequencia cadastrada.</p>
+        </div>
+        <div class="card">
+          <h2>Clientes sem frequencia</h2>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">
+            Clientes que ainda nao informaram a frequencia de corte.
+          </p>
+          <div id="followup-nofreq"></div>
+          <p id="followup-nofreq-empty" class="empty-state hidden">Todos os clientes tem frequencia.</p>
+        </div>
+      </div>
+
+      <button class="btn btn-outline" style="margin-top: 20px;" onclick="logout()">Sair</button>
+    </div>
+
+    <!-- Install PWA banner -->
+    <div id="install-banner" class="install-banner hidden">
+      <div class="install-banner-text">
+        <strong id="install-title"></strong>
+        <p id="install-instructions"></p>
+      </div>
+      <button class="install-banner-close" onclick="dismissInstallBanner()">&times;</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/admin.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+
+    let deferredPrompt = null;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      showInstallBanner('android');
+    });
+
+    function showInstallBanner(platform) {
+      if (window.matchMedia('(display-mode: standalone)').matches) return;
+      if (navigator.standalone) return;
+      if (sessionStorage.getItem('vb_install_dismissed')) return;
+
+      const banner = document.getElementById('install-banner');
+      const title = document.getElementById('install-title');
+      const instructions = document.getElementById('install-instructions');
+
+      if (platform === 'android') {
+        title.textContent = 'Instalar o app';
+        instructions.innerHTML = 'Toque em <strong>"Instalar"</strong> para adicionar a tela inicial.';
+        if (!banner.querySelector('.install-btn')) {
+          const btn = document.createElement('button');
+          btn.className = 'install-btn';
+          btn.textContent = 'Instalar';
+          btn.onclick = installPWA;
+          banner.insertBefore(btn, banner.querySelector('.install-banner-close'));
+        }
+      } else if (platform === 'ios') {
+        title.textContent = 'Adicionar a tela inicial';
+        instructions.innerHTML = 'No Safari, toque em <strong>Compartilhar</strong> (icone de seta) e depois em <strong>"Adicionar a Tela de Inicio"</strong>.';
+      }
+
+      banner.classList.remove('hidden');
+    }
+
+    async function installPWA() {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      if (outcome === 'accepted') {
+        document.getElementById('install-banner').classList.add('hidden');
+      }
+    }
+
+    function dismissInstallBanner() {
+      document.getElementById('install-banner').classList.add('hidden');
+      sessionStorage.setItem('vb_install_dismissed', '1');
+    }
+
+    window.addEventListener('load', () => {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome|CriOS|FxiOS/.test(navigator.userAgent);
+      if (isIOS && isSafari) {
+        setTimeout(() => showInstallBanner('ios'), 2000);
+      }
+    });
+  </script>
+</body>
+</html>
