@@ -4,8 +4,8 @@
   --surface: #243220;
   --surface-hover: #2E3D28;
   --border: #3A4A32;
-  --text: #E8E8E0;
-  --text-muted: #8A9680;
+  --text: #B0B0B0;
+  --text-muted: #7A7A7A;
   --accent: #C9A96E;
   --accent-hover: #B89555;
   --danger: #e05555;
@@ -57,13 +57,16 @@ body {
   margin-top: 4px;
 }
 
-/* Cards */
+/* Cards - Glassmorphism */
 .card {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: rgba(36, 50, 32, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius);
   padding: 20px;
   margin-bottom: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
 }
 
 .card h2 {
@@ -531,12 +534,15 @@ body {
 .carousel-card {
   flex: 0 0 140px;
   scroll-snap-align: start;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: rgba(36, 50, 32, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius);
   overflow: hidden;
   cursor: pointer;
   transition: border-color 0.2s;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
 }
 
 .carousel-card:hover {
@@ -668,14 +674,16 @@ body {
   padding: 20px;
 }
 
-/* Install PWA banner */
+/* Install PWA banner - Glassmorphism */
 .install-banner {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  background: var(--surface);
-  border-top: 1px solid var(--accent);
+  background: rgba(36, 50, 32, 0.7);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid rgba(201, 169, 110, 0.3);
   padding: 14px 20px;
   display: flex;
   align-items: center;
@@ -729,25 +737,30 @@ body {
   flex-shrink: 0;
 }
 
-/* Auth bar */
+/* Auth bar - Glassmorphism */
 .auth-bar {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: rgba(36, 50, 32, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius);
   padding: 14px 16px;
   margin-bottom: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
 }
 
-/* Loyalty Card */
+/* Loyalty Card - Glassmorphism */
 .loyalty-card {
-  background: #1E2A1A;
-  border: 2px solid var(--accent);
+  background: rgba(30, 42, 26, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 2px solid rgba(201, 169, 110, 0.3);
   border-radius: 16px;
   padding: 28px 24px;
   text-align: center;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(201,169,110,0.1);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(201,169,110,0.08);
 }
 
 .loyalty-card .lc-stripe {
