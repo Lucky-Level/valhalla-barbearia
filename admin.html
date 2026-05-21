@@ -30,37 +30,64 @@
         <p>Painel de controle</p>
       </div>
 
-      <div class="tab-bar">
+      <div class="tab-bar" style="flex-wrap: wrap;">
         <button class="tab active" data-tab="availability" onclick="switchTab('availability')">Horarios</button>
         <button class="tab" data-tab="appointments" onclick="switchTab('appointments')">Agendamentos</button>
+        <button class="tab" data-tab="barbers" onclick="switchTab('barbers')">Barbeiros</button>
         <button class="tab" data-tab="products" onclick="switchTab('products')">Produtos</button>
         <button class="tab" data-tab="orders" onclick="switchTab('orders')">Encomendas</button>
         <button class="tab" data-tab="followup" onclick="switchTab('followup')">Follow-up <span id="followup-badge" class="badge hidden">0</span></button>
       </div>
 
-      <!-- Tab: Horarios (schedule + folgas) -->
+      <!-- Tab: Horarios (schedule + folgas per barber) -->
       <div id="tab-availability">
         <div class="card">
-          <h2>Horario semanal</h2>
-          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">
-            Defina os dias e horarios que voce trabalha. O cliente so ve os dias ativos.
-          </p>
-          <div id="schedule-list"></div>
+          <h2>Selecione o barbeiro</h2>
+          <select id="schedule-barber-select" style="width:100%; padding:12px; background:var(--bg); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:0.95rem;" onchange="loadAvailability()">
+            <option value="">-- Selecione --</option>
+          </select>
         </div>
 
-        <div class="card">
-          <h2>Folgas e feriados</h2>
-          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">
-            Marque dias especificos que voce nao vai trabalhar.
-          </p>
-          <div style="display:flex; gap:10px; margin-bottom: 14px;">
-            <div class="form-group" style="flex:1; margin-bottom:0;">
-              <input type="date" id="dayoff-date">
-            </div>
-            <button class="btn btn-primary btn-sm" style="align-self:flex-end; padding: 12px 16px;" onclick="addDayOff()">Adicionar</button>
+        <div id="schedule-section" class="hidden">
+          <div class="card">
+            <h2>Horario semanal</h2>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">
+              Defina os dias e horarios deste barbeiro. O cliente so ve os dias ativos.
+            </p>
+            <div id="schedule-list"></div>
           </div>
-          <div id="daysoff-list"></div>
-          <p id="daysoff-empty" class="empty-state hidden">Nenhuma folga cadastrada.</p>
+
+          <div class="card">
+            <h2>Folgas e feriados</h2>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">
+              Marque dias especificos que este barbeiro nao vai trabalhar.
+            </p>
+            <div style="display:flex; gap:10px; margin-bottom: 14px;">
+              <div class="form-group" style="flex:1; margin-bottom:0;">
+                <input type="date" id="dayoff-date">
+              </div>
+              <button class="btn btn-primary btn-sm" style="align-self:flex-end; padding: 12px 16px;" onclick="addDayOff()">Adicionar</button>
+            </div>
+            <div id="daysoff-list"></div>
+            <p id="daysoff-empty" class="empty-state hidden">Nenhuma folga cadastrada.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Barbeiros -->
+      <div id="tab-barbers" class="hidden">
+        <div class="card">
+          <h2>Adicionar barbeiro</h2>
+          <div class="form-group">
+            <label>Nome</label>
+            <input type="text" id="barber-name" placeholder="Ex: João">
+          </div>
+          <button class="btn btn-primary" onclick="addBarber()">Adicionar</button>
+        </div>
+        <div class="card">
+          <h2>Barbeiros cadastrados</h2>
+          <div id="barbers-list"></div>
+          <p id="barbers-empty" class="empty-state hidden">Nenhum barbeiro cadastrado.</p>
         </div>
       </div>
 

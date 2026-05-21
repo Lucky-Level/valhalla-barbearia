@@ -56,34 +56,133 @@ function logout() {
 }
 
 // --- Tabs ---
+const ALL_TABS = ['availability', 'appointments', 'barbers', 'products', 'orders', 'followup'];
+
 function switchTab(tab) {
   document.querySelectorAll('.tab').forEach(t => {
     t.classList.toggle('active', t.dataset.tab === tab);
   });
-  document.getElementById('tab-availability').classList.toggle('hidden', tab !== 'availability');
-  document.getElementById('tab-appointments').classList.toggle('hidden', tab !== 'appointments');
-  document.getElementById('tab-products').classList.toggle('hidden', tab !== 'products');
-  document.getElementById('tab-orders').classList.toggle('hidden', tab !== 'orders');
-  document.getElementById('tab-followup').classList.toggle('hidden', tab !== 'followup');
+  ALL_TABS.forEach(t => {
+    const el = document.getElementById(`tab-${t}`);
+    if (el) el.classList.toggle('hidden', t !== tab);
+  });
 
+  if (tab === 'barbers') loadBarbers();
   if (tab === 'products') loadAdminProducts();
   if (tab === 'orders') loadOrders();
   if (tab === 'followup') loadFollowups();
 }
 
-// --- Schedule (weekly hours + days off) ---
-const DAY_NAMES = ['Domingo', 'Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado'];
+// --- Barbers ---
+async function loadBarbers() {
+  const { data } = await db.from('valhalla_barbers').select('*').order('name');
 
-async function loadAvailability() {
-  await Promise.all([loadSchedule(), loadDaysOff()]);
+  const container = document.getElementById('barbers-list');
+  const empty = document.getElementById('barbers-empty');
+
+  if (!data || data.length === 0) {
+    container.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+
+  empty.classList.add('hidden');
+  container.innerHTML = data.map(b => `
+    <div class="avail-item">
+      <div class="info" style="flex:1;">
+        <strong>${b.name}</strong>
+        <div style="font-size:0.75rem; color:${b.active ? 'var(--success)' : 'var(--danger)'};">${b.active ? 'Ativo' : 'Inativo'}</div>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <button class="btn btn-outline btn-sm" onclick="toggleBarber('${b.id}', ${!b.active})">${b.active ? 'Desativar' : 'Ativar'}</button>
+        <button class="delete-btn" onclick="deleteBarber('${b.id}')" title="Remover">&#10005;</button>
+      </div>
+    </div>
+  `).join('');
 }
 
-async function loadSchedule() {
-  const { data } = await db.from('valhalla_schedule').select('*').order('day_of_week');
+async function addBarber() {
+  const name = document.getElementById('barber-name').value.trim();
+  if (!name) return;
+
+  const { data } = await db.rpc('admin_manage_barber', {
+    pwd: adminPassword,
+    action: 'insert',
+    b_name: name
+  });
+
+  if (data?.error) { alert(data.error); return; }
+
+  document.getElementById('barber-name').value = '';
+  loadBarbers();
+  loadBarberSelect();
+}
+
+async function toggleBarber(id, active) {
+  await db.rpc('admin_manage_barber', {
+    pwd: adminPassword,
+    action: 'update',
+    b_id: id,
+    b_active: active
+  });
+  loadBarbers();
+  loadBarberSelect();
+}
+
+async function deleteBarber(id) {
+  if (!confirm('Remover este barbeiro e todos os seus horarios?')) return;
+  await db.rpc('admin_manage_barber', {
+    pwd: adminPassword,
+    action: 'delete',
+    b_id: id
+  });
+  loadBarbers();
+  loadBarberSelect();
+}
+
+// --- Schedule (per barber) ---
+const DAY_NAMES = ['Domingo', 'Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado'];
+
+async function loadBarberSelect() {
+  const { data } = await db.from('valhalla_barbers').select('id, name').eq('active', true).order('name');
+  const select = document.getElementById('schedule-barber-select');
+  const current = select.value;
+
+  select.innerHTML = '<option value="">-- Selecione --</option>' +
+    (data || []).map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+
+  if (current && (data || []).find(b => b.id === current)) {
+    select.value = current;
+  }
+}
+
+function getSelectedBarberId() {
+  return document.getElementById('schedule-barber-select').value;
+}
+
+async function loadAvailability() {
+  await loadBarberSelect();
+  const barberId = getSelectedBarberId();
+  const section = document.getElementById('schedule-section');
+
+  if (!barberId) {
+    section.classList.add('hidden');
+    return;
+  }
+
+  section.classList.remove('hidden');
+  await Promise.all([loadSchedule(barberId), loadDaysOff(barberId)]);
+}
+
+async function loadSchedule(barberId) {
+  const { data } = await db.from('valhalla_schedule')
+    .select('*')
+    .eq('barber_id', barberId)
+    .order('day_of_week');
 
   const container = document.getElementById('schedule-list');
   if (!data || data.length === 0) {
-    container.innerHTML = '<p class="empty-state">Horario nao configurado.</p>';
+    container.innerHTML = '<p class="empty-state">Horario nao configurado pra este barbeiro.</p>';
     return;
   }
 
@@ -111,23 +210,26 @@ async function loadSchedule() {
 }
 
 async function toggleScheduleDay(dow, working) {
+  const barberId = getSelectedBarberId();
+  if (!barberId) return;
   const timesEl = document.getElementById(`sched-times-${dow}`);
   const inputs = timesEl.querySelectorAll('input[type=time]');
-  const start = inputs[0].value;
-  const end = inputs[1].value;
 
   await db.rpc('admin_update_schedule', {
     pwd: adminPassword,
+    p_barber_id: barberId,
     p_day: dow,
     p_working: working,
-    p_start: working ? start : null,
-    p_end: working ? end : null
+    p_start: working ? inputs[0].value : null,
+    p_end: working ? inputs[1].value : null
   });
 
-  loadSchedule();
+  loadSchedule(barberId);
 }
 
 async function updateScheduleTime(dow) {
+  const barberId = getSelectedBarberId();
+  if (!barberId) return;
   const timesEl = document.getElementById(`sched-times-${dow}`);
   const inputs = timesEl.querySelectorAll('input[type=time]');
   const start = inputs[0].value;
@@ -137,6 +239,7 @@ async function updateScheduleTime(dow) {
 
   await db.rpc('admin_update_schedule', {
     pwd: adminPassword,
+    p_barber_id: barberId,
     p_day: dow,
     p_working: true,
     p_start: start,
@@ -144,10 +247,11 @@ async function updateScheduleTime(dow) {
   });
 }
 
-async function loadDaysOff() {
+async function loadDaysOff(barberId) {
   const today = new Date().toISOString().split('T')[0];
   const { data } = await db.from('valhalla_days_off')
     .select('*')
+    .eq('barber_id', barberId)
     .gte('date', today)
     .order('date', { ascending: true });
 
@@ -178,26 +282,27 @@ async function loadDaysOff() {
 }
 
 async function addDayOff() {
+  const barberId = getSelectedBarberId();
+  if (!barberId) { alert('Selecione um barbeiro'); return; }
   const date = document.getElementById('dayoff-date').value;
   if (!date) return;
 
   const { data } = await db.rpc('admin_manage_day_off', {
     pwd: adminPassword,
     action: 'insert',
+    p_barber_id: barberId,
     p_date: date
   });
 
-  if (data?.error) {
-    alert(data.error);
-    return;
-  }
+  if (data?.error) { alert(data.error); return; }
 
   document.getElementById('dayoff-date').value = '';
-  loadDaysOff();
+  loadDaysOff(barberId);
 }
 
 async function deleteDayOff(id) {
   if (!confirm('Remover esta folga?')) return;
+  const barberId = getSelectedBarberId();
 
   await db.rpc('admin_manage_day_off', {
     pwd: adminPassword,
@@ -205,7 +310,7 @@ async function deleteDayOff(id) {
     p_id: id
   });
 
-  loadDaysOff();
+  loadDaysOff(barberId);
 }
 
 // --- Appointments ---

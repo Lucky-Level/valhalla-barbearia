@@ -5,7 +5,9 @@ let currentStep = 1;
 
 const state = {
   services: [],
+  barbers: [],
   selectedService: null,
+  selectedBarber: null,
   selectedDate: null,
   selectedTime: null,
   currentMonth: new Date(),
@@ -13,6 +15,8 @@ const state = {
   appointments: [],
   schedule: []
 };
+
+const TOTAL_STEPS = 5;
 
 // --- Main tab switching (shared) ---
 function switchMainTab(tab) {
@@ -31,10 +35,13 @@ function switchMainTab(tab) {
 
 // --- Init ---
 async function init() {
-  const { data } = await db.from('valhalla_services').select('*');
-  state.services = data || [];
+  const [servicesRes, barbersRes] = await Promise.all([
+    db.from('valhalla_services').select('*'),
+    db.from('valhalla_barbers').select('*').eq('active', true).order('name')
+  ]);
+  state.services = servicesRes.data || [];
+  state.barbers = barbersRes.data || [];
   renderServices();
-  // Set initial history state
   history.replaceState({ step: 1 }, '', '');
 }
 
@@ -50,13 +57,12 @@ function navigateBack() {
 }
 
 function showStep(n) {
-  if (typeof n !== 'number' || n < 1 || n > 4) n = 1;
+  if (typeof n !== 'number' || n < 1 || n > TOTAL_STEPS) n = 1;
   currentStep = n;
 
-  // Ensure booking tab is visible
   switchMainTab('booking');
 
-  for (let i = 1; i <= 4; i++) {
+  for (let i = 1; i <= TOTAL_STEPS; i++) {
     document.getElementById(`step-${i}`).classList.toggle('hidden', i !== n);
   }
   document.getElementById('step-success').classList.add('hidden');
@@ -67,14 +73,9 @@ function showStep(n) {
     el.classList.toggle('done', s < n);
   });
 
-  // Re-render calendar when going back to step 2
-  if (n === 2 && state.selectedService) {
-    renderCalendar();
-  }
-  // Re-render time slots when going back to step 3
-  if (n === 3 && state.selectedDate) {
-    loadTimeSlots();
-  }
+  // Re-render when going back
+  if (n === 3 && state.selectedBarber) renderCalendar();
+  if (n === 4 && state.selectedDate) loadTimeSlots();
 }
 
 function goToStep(n) {
@@ -96,16 +97,47 @@ function renderServices() {
 
 function selectService(id) {
   state.selectedService = state.services.find(s => s.id === id);
-  document.querySelectorAll('.service-btn').forEach(b => {
+  document.querySelectorAll('#services-container .service-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.id === id);
+  });
+  state.selectedBarber = null;
+  state.selectedDate = null;
+  state.selectedTime = null;
+  renderBarbers();
+  goToStep(2);
+}
+
+// --- Step 2: Barbers ---
+function renderBarbers() {
+  const container = document.getElementById('barbers-container');
+
+  if (state.barbers.length === 0) {
+    container.innerHTML = '<p class="empty-state">Nenhum barbeiro disponivel.</p>';
+    return;
+  }
+
+  container.innerHTML = state.barbers.map(b => {
+    const initials = b.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+    return `
+      <button class="service-btn" data-id="${b.id}" onclick="selectBarber('${b.id}')">
+        <span class="barber-avatar">${initials}</span>
+        <span class="name">${b.name}</span>
+      </button>`;
+  }).join('');
+}
+
+function selectBarber(id) {
+  state.selectedBarber = state.barbers.find(b => b.id === id);
+  document.querySelectorAll('#barbers-container .service-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.id === id);
   });
   state.selectedDate = null;
   state.selectedTime = null;
   loadMonth();
-  goToStep(2);
+  goToStep(3);
 }
 
-// --- Step 2: Calendar (schedule-based) ---
+// --- Step 3: Calendar (schedule-based, per barber) ---
 async function loadMonth() {
   const year = state.currentMonth.getFullYear();
   const month = state.currentMonth.getMonth();
@@ -114,18 +146,17 @@ async function loadMonth() {
 
   const from = firstDay.toISOString().split('T')[0];
   const to = lastDay.toISOString().split('T')[0];
+  const barberId = state.selectedBarber.id;
 
-  // Load weekly schedule + days off in parallel
   const [scheduleRes, daysOffRes] = await Promise.all([
-    db.from('valhalla_schedule').select('*').eq('is_working', true),
-    db.from('valhalla_days_off').select('date').gte('date', from).lte('date', to)
+    db.from('valhalla_schedule').select('*').eq('barber_id', barberId).eq('is_working', true),
+    db.from('valhalla_days_off').select('date').eq('barber_id', barberId).gte('date', from).lte('date', to)
   ]);
 
   const workingDays = new Set((scheduleRes.data || []).map(s => s.day_of_week));
   const daysOff = new Set((daysOffRes.data || []).map(d => d.date));
   state.schedule = scheduleRes.data || [];
 
-  // Compute available dates: working day of week AND not a day off
   const available = [];
   for (let d = 1; d <= lastDay.getDate(); d++) {
     const dateObj = new Date(year, month, d);
@@ -151,7 +182,7 @@ function renderCalendar() {
 
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
-  const startDow = (firstDay.getDay() + 6) % 7; // Monday = 0
+  const startDow = (firstDay.getDay() + 6) % 7;
 
   const days = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'];
   let html = days.map(d => `<div class="day-label">${d}</div>`).join('');
@@ -197,12 +228,11 @@ async function selectDate(dateStr) {
   state.selectedTime = null;
   renderCalendar();
   await loadTimeSlots();
-  goToStep(3);
+  goToStep(4);
 }
 
-// --- Step 3: Time slots (schedule-based) ---
+// --- Step 4: Time slots (per barber) ---
 async function loadTimeSlots() {
-  // Get schedule for this day of the week
   const dateObj = new Date(state.selectedDate + 'T00:00:00');
   const dow = dateObj.getDay();
   const scheduleDay = (state.schedule || []).find(s => s.day_of_week === dow);
@@ -211,6 +241,7 @@ async function loadTimeSlots() {
     .from('valhalla_appointments')
     .select('start_time, end_time')
     .eq('date', state.selectedDate)
+    .eq('barber_id', state.selectedBarber.id)
     .eq('status', 'confirmed');
 
   state.appointments = apts || [];
@@ -260,18 +291,20 @@ function selectTime(time, end) {
   });
 
   const service = state.selectedService;
+  const barber = state.selectedBarber;
   const dateParts = state.selectedDate.split('-');
   const dateFormatted = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
 
   document.getElementById('sum-service').textContent = `${service.name} (${service.duration_minutes} min)`;
+  document.getElementById('sum-barber').textContent = barber.name;
   document.getElementById('sum-date').textContent = dateFormatted;
   document.getElementById('sum-time').textContent = time;
 
-  goToStep(4);
+  goToStep(5);
   updateConfirmBtn();
 }
 
-// --- Step 4: Confirm ---
+// --- Step 5: Confirm ---
 function updateConfirmBtn() {
   const name = document.getElementById('client-name').value.trim();
   const phone = document.getElementById('client-phone').value.trim();
@@ -291,6 +324,7 @@ document.getElementById('confirm-btn').addEventListener('click', async () => {
 
   const { error } = await db.from('valhalla_appointments').insert({
     service_id: state.selectedService.id,
+    barber_id: state.selectedBarber.id,
     date: state.selectedDate,
     start_time: state.selectedTime.start,
     end_time: state.selectedTime.end,
@@ -309,7 +343,7 @@ document.getElementById('confirm-btn').addEventListener('click', async () => {
 });
 
 function showSuccess(name, phone) {
-  for (let i = 1; i <= 4; i++) {
+  for (let i = 1; i <= TOTAL_STEPS; i++) {
     document.getElementById(`step-${i}`).classList.add('hidden');
   }
   document.querySelector('.steps').classList.add('hidden');
@@ -318,12 +352,13 @@ function showSuccess(name, phone) {
   const dateFormatted = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
 
   document.getElementById('success-details').textContent =
-    `${state.selectedService.name} - ${dateFormatted} as ${state.selectedTime.start}`;
+    `${state.selectedService.name} com ${state.selectedBarber.name} - ${dateFormatted} as ${state.selectedTime.start}`;
 
   const msg = CONFIG.WHATSAPP_MESSAGE
     .replace('{name}', name)
     .replace('{phone}', phone)
     .replace('{service}', state.selectedService.name)
+    .replace('{barber}', state.selectedBarber.name)
     .replace('{date}', dateFormatted)
     .replace('{time}', state.selectedTime.start);
 
@@ -333,8 +368,6 @@ function showSuccess(name, phone) {
   waBtn.onclick = () => window.open(waUrl, '_blank');
 
   document.getElementById('step-success').classList.remove('hidden');
-
-  // Push a "success" state so back goes to step 1 clean
   history.pushState({ step: 'success' }, '', '');
 }
 

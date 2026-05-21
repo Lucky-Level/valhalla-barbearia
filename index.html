@@ -107,6 +107,7 @@
         <div class="step" data-step="2"></div>
         <div class="step" data-step="3"></div>
         <div class="step" data-step="4"></div>
+        <div class="step" data-step="5"></div>
       </div>
 
       <!-- Step 1: Service -->
@@ -117,8 +118,17 @@
         </div>
       </div>
 
-      <!-- Step 2: Date -->
+      <!-- Step 2: Barber -->
       <div id="step-2" class="hidden">
+        <div class="card">
+          <button class="back-btn" onclick="navigateBack()">&larr; Voltar</button>
+          <h2>Barbeiro</h2>
+          <div class="service-options" id="barbers-container"></div>
+        </div>
+      </div>
+
+      <!-- Step 3: Date -->
+      <div id="step-3" class="hidden">
         <div class="card">
           <button class="back-btn" onclick="navigateBack()">&larr; Voltar</button>
           <h2>Data</h2>
@@ -131,8 +141,8 @@
         </div>
       </div>
 
-      <!-- Step 3: Time -->
-      <div id="step-3" class="hidden">
+      <!-- Step 4: Time -->
+      <div id="step-4" class="hidden">
         <div class="card">
           <button class="back-btn" onclick="navigateBack()">&larr; Voltar</button>
           <h2>Horario</h2>
@@ -141,8 +151,8 @@
         </div>
       </div>
 
-      <!-- Step 4: Confirm -->
-      <div id="step-4" class="hidden">
+      <!-- Step 5: Confirm -->
+      <div id="step-5" class="hidden">
         <div class="card">
           <button class="back-btn" onclick="navigateBack()">&larr; Voltar</button>
           <h2>Seus dados</h2>
@@ -162,6 +172,10 @@
             <div class="summary-row">
               <span class="label">Servico</span>
               <span id="sum-service"></span>
+            </div>
+            <div class="summary-row">
+              <span class="label">Barbeiro</span>
+              <span id="sum-barber"></span>
             </div>
             <div class="summary-row">
               <span class="label">Data</span>

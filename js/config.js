@@ -15,5 +15,5 @@ const CONFIG = {
 
   // Mensagem WhatsApp template
   // Variaveis: {name}, {phone}, {service}, {date}, {time}
-  WHATSAPP_MESSAGE: 'Oi, agendei {service} para {date} as {time}. - {name}, {phone}'
+  WHATSAPP_MESSAGE: 'Oi, agendei {service} com {barber} para {date} as {time}. - {name}, {phone}'
 };
