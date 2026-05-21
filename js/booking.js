@@ -10,7 +10,8 @@ const state = {
   selectedTime: null,
   currentMonth: new Date(),
   availableDates: [],
-  appointments: []
+  appointments: [],
+  schedule: []
 };
 
 // --- Main tab switching (shared) ---
@@ -104,7 +105,7 @@ function selectService(id) {
   goToStep(2);
 }
 
-// --- Step 2: Calendar ---
+// --- Step 2: Calendar (schedule-based) ---
 async function loadMonth() {
   const year = state.currentMonth.getFullYear();
   const month = state.currentMonth.getMonth();
@@ -114,13 +115,27 @@ async function loadMonth() {
   const from = firstDay.toISOString().split('T')[0];
   const to = lastDay.toISOString().split('T')[0];
 
-  const { data } = await db
-    .from('valhalla_availability')
-    .select('date')
-    .gte('date', from)
-    .lte('date', to);
+  // Load weekly schedule + days off in parallel
+  const [scheduleRes, daysOffRes] = await Promise.all([
+    db.from('valhalla_schedule').select('*').eq('is_working', true),
+    db.from('valhalla_days_off').select('date').gte('date', from).lte('date', to)
+  ]);
 
-  state.availableDates = [...new Set((data || []).map(a => a.date))];
+  const workingDays = new Set((scheduleRes.data || []).map(s => s.day_of_week));
+  const daysOff = new Set((daysOffRes.data || []).map(d => d.date));
+  state.schedule = scheduleRes.data || [];
+
+  // Compute available dates: working day of week AND not a day off
+  const available = [];
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    const dateObj = new Date(year, month, d);
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    if (workingDays.has(dateObj.getDay()) && !daysOff.has(dateStr)) {
+      available.push(dateStr);
+    }
+  }
+
+  state.availableDates = available;
   renderCalendar();
 }
 
@@ -185,12 +200,12 @@ async function selectDate(dateStr) {
   goToStep(3);
 }
 
-// --- Step 3: Time slots ---
+// --- Step 3: Time slots (schedule-based) ---
 async function loadTimeSlots() {
-  const { data: blocks } = await db
-    .from('valhalla_availability')
-    .select('*')
-    .eq('date', state.selectedDate);
+  // Get schedule for this day of the week
+  const dateObj = new Date(state.selectedDate + 'T00:00:00');
+  const dow = dateObj.getDay();
+  const scheduleDay = (state.schedule || []).find(s => s.day_of_week === dow);
 
   const { data: apts } = await db
     .from('valhalla_appointments')
@@ -205,9 +220,9 @@ async function loadTimeSlots() {
   const interval = service.interval_minutes;
   const slots = [];
 
-  (blocks || []).forEach(block => {
-    const startMin = timeToMinutes(block.start_time);
-    const endMin = timeToMinutes(block.end_time);
+  if (scheduleDay && scheduleDay.start_time && scheduleDay.end_time) {
+    const startMin = timeToMinutes(scheduleDay.start_time);
+    const endMin = timeToMinutes(scheduleDay.end_time);
 
     for (let t = startMin; t + slotDuration <= endMin; t += slotDuration + interval) {
       const timeStr = minutesToTime(t);
@@ -219,7 +234,7 @@ async function loadTimeSlots() {
       });
       slots.push({ time: timeStr, end: endStr, booked: isBooked });
     }
-  });
+  }
 
   const container = document.getElementById('time-slots');
   const noSlots = document.getElementById('no-slots');

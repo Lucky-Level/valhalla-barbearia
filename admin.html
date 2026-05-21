@@ -35,34 +35,32 @@
         <button class="tab" data-tab="appointments" onclick="switchTab('appointments')">Agendamentos</button>
         <button class="tab" data-tab="products" onclick="switchTab('products')">Produtos</button>
         <button class="tab" data-tab="orders" onclick="switchTab('orders')">Encomendas</button>
-        <button class="tab" data-tab="followup" onclick="switchTab('followup')">Follow-up</button>
+        <button class="tab" data-tab="followup" onclick="switchTab('followup')">Follow-up <span id="followup-badge" class="badge hidden">0</span></button>
       </div>
 
-      <!-- Tab: Availability -->
+      <!-- Tab: Horarios (schedule + folgas) -->
       <div id="tab-availability">
         <div class="card">
-          <h2>Adicionar disponibilidade</h2>
-          <div class="form-group">
-            <label>Data</label>
-            <input type="date" id="av-date">
-          </div>
-          <div style="display:flex; gap:10px;">
-            <div class="form-group" style="flex:1">
-              <label>Inicio</label>
-              <input type="time" id="av-start" value="09:00">
-            </div>
-            <div class="form-group" style="flex:1">
-              <label>Fim</label>
-              <input type="time" id="av-end" value="18:00">
-            </div>
-          </div>
-          <button class="btn btn-primary" onclick="addAvailability()">Adicionar</button>
+          <h2>Horario semanal</h2>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">
+            Defina os dias e horarios que voce trabalha. O cliente so ve os dias ativos.
+          </p>
+          <div id="schedule-list"></div>
         </div>
 
         <div class="card">
-          <h2>Proximos dias disponiveis</h2>
-          <ul class="avail-list" id="avail-list"></ul>
-          <p id="avail-empty" class="empty-state hidden">Nenhuma disponibilidade cadastrada.</p>
+          <h2>Folgas e feriados</h2>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">
+            Marque dias especificos que voce nao vai trabalhar.
+          </p>
+          <div style="display:flex; gap:10px; margin-bottom: 14px;">
+            <div class="form-group" style="flex:1; margin-bottom:0;">
+              <input type="date" id="dayoff-date">
+            </div>
+            <button class="btn btn-primary btn-sm" style="align-self:flex-end; padding: 12px 16px;" onclick="addDayOff()">Adicionar</button>
+          </div>
+          <div id="daysoff-list"></div>
+          <p id="daysoff-empty" class="empty-state hidden">Nenhuma folga cadastrada.</p>
         </div>
       </div>
 
@@ -129,10 +127,20 @@
 
       <!-- Tab: Follow-up -->
       <div id="tab-followup" class="hidden">
-        <div class="card">
-          <h2>Cronograma de follow-up</h2>
+        <!-- Lembretes do dia (destaque) -->
+        <div class="card" id="followup-today-card" style="border: 1px solid rgba(201, 169, 110, 0.4);">
+          <h2 style="color: var(--accent);">Lembretes de hoje</h2>
           <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">
-            Clientes ordenados por urgencia. Vermelho = atrasado, Amarelo = proximo, Verde = em dia.
+            Clientes que ja passaram da frequencia de corte. Toque "Enviar" pra abrir o WhatsApp com a mensagem pronta.
+          </p>
+          <div id="followup-today-list"></div>
+          <p id="followup-today-empty" class="empty-state hidden">Nenhum lembrete pendente hoje.</p>
+        </div>
+
+        <div class="card">
+          <h2>Todos os clientes</h2>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">
+            Vermelho = atrasado, Amarelo = proximo, Verde = em dia.
           </p>
           <div id="followup-list"></div>
           <p id="followup-empty" class="empty-state hidden">Nenhum cliente com frequencia cadastrada.</p>

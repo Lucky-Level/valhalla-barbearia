@@ -1040,6 +1040,35 @@ body {
   border-left: 3px solid var(--success);
 }
 
+/* Badge (notification count) */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--danger);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  padding: 0 5px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+/* Followup today highlight */
+.followup-item.today-due {
+  background: rgba(201, 169, 110, 0.08);
+  border-left: 3px solid var(--accent);
+}
+
+.followup-item .fu-sent {
+  font-size: 0.7rem;
+  color: var(--success);
+  font-weight: 600;
+}
+
 /* Responsive */
 @media (max-width: 480px) {
   .container { padding: 14px; }

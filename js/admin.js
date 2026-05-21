@@ -71,64 +71,120 @@ function switchTab(tab) {
   if (tab === 'followup') loadFollowups();
 }
 
-// --- Availability ---
+// --- Schedule (weekly hours + days off) ---
+const DAY_NAMES = ['Domingo', 'Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado'];
+
 async function loadAvailability() {
+  await Promise.all([loadSchedule(), loadDaysOff()]);
+}
+
+async function loadSchedule() {
+  const { data } = await db.from('valhalla_schedule').select('*').order('day_of_week');
+
+  const container = document.getElementById('schedule-list');
+  if (!data || data.length === 0) {
+    container.innerHTML = '<p class="empty-state">Horario nao configurado.</p>';
+    return;
+  }
+
+  container.innerHTML = data.map(s => {
+    const start = s.start_time ? s.start_time.slice(0, 5) : '09:00';
+    const end = s.end_time ? s.end_time.slice(0, 5) : '19:00';
+    const checked = s.is_working ? 'checked' : '';
+    const dimStyle = s.is_working ? '' : 'opacity: 0.4;';
+
+    return `
+      <div class="avail-item" style="${dimStyle}" id="sched-${s.day_of_week}">
+        <div class="info" style="flex:1;">
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+            <input type="checkbox" ${checked} onchange="toggleScheduleDay(${s.day_of_week}, this.checked)">
+            <strong>${DAY_NAMES[s.day_of_week]}</strong>
+          </label>
+        </div>
+        <div style="display:flex; gap:6px; align-items:center;" id="sched-times-${s.day_of_week}">
+          <input type="time" value="${start}" style="padding:6px; background:var(--bg); border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:0.8rem;" onchange="updateScheduleTime(${s.day_of_week})">
+          <span style="color:var(--text-muted);">-</span>
+          <input type="time" value="${end}" style="padding:6px; background:var(--bg); border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:0.8rem;" onchange="updateScheduleTime(${s.day_of_week})">
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function toggleScheduleDay(dow, working) {
+  const timesEl = document.getElementById(`sched-times-${dow}`);
+  const inputs = timesEl.querySelectorAll('input[type=time]');
+  const start = inputs[0].value;
+  const end = inputs[1].value;
+
+  await db.rpc('admin_update_schedule', {
+    pwd: adminPassword,
+    p_day: dow,
+    p_working: working,
+    p_start: working ? start : null,
+    p_end: working ? end : null
+  });
+
+  loadSchedule();
+}
+
+async function updateScheduleTime(dow) {
+  const timesEl = document.getElementById(`sched-times-${dow}`);
+  const inputs = timesEl.querySelectorAll('input[type=time]');
+  const start = inputs[0].value;
+  const end = inputs[1].value;
+
+  if (!start || !end || start >= end) return;
+
+  await db.rpc('admin_update_schedule', {
+    pwd: adminPassword,
+    p_day: dow,
+    p_working: true,
+    p_start: start,
+    p_end: end
+  });
+}
+
+async function loadDaysOff() {
   const today = new Date().toISOString().split('T')[0];
-  const { data } = await db
-    .from('valhalla_availability')
+  const { data } = await db.from('valhalla_days_off')
     .select('*')
     .gte('date', today)
-    .order('date', { ascending: true })
-    .order('start_time', { ascending: true });
+    .order('date', { ascending: true });
 
-  const list = document.getElementById('avail-list');
-  const empty = document.getElementById('avail-empty');
+  const container = document.getElementById('daysoff-list');
+  const empty = document.getElementById('daysoff-empty');
 
   if (!data || data.length === 0) {
-    list.innerHTML = '';
+    container.innerHTML = '';
     empty.classList.remove('hidden');
     return;
   }
 
   empty.classList.add('hidden');
-  const weekdays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
-
-  list.innerHTML = data.map(a => {
-    const d = new Date(a.date + 'T00:00:00');
-    const dayName = weekdays[d.getDay()];
-    const dateParts = a.date.split('-');
-    const dateFormatted = `${dateParts[2]}/${dateParts[1]}`;
-    const start = a.start_time.slice(0, 5);
-    const end = a.end_time.slice(0, 5);
+  container.innerHTML = data.map(d => {
+    const dateObj = new Date(d.date + 'T00:00:00');
+    const dayName = DAY_NAMES[dateObj.getDay()];
+    const parts = d.date.split('-');
+    const formatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
 
     return `
-      <li class="avail-item">
+      <div class="avail-item">
         <div class="info">
-          <strong>${dayName} ${dateFormatted}</strong> &mdash; ${start} ate ${end}
+          <strong>${dayName} ${formatted}</strong>${d.reason ? ` &mdash; ${d.reason}` : ''}
         </div>
-        <button class="delete-btn" onclick="deleteAvailability('${a.id}')" title="Remover">&#10005;</button>
-      </li>
-    `;
+        <button class="delete-btn" onclick="deleteDayOff('${d.id}')" title="Remover">&#10005;</button>
+      </div>`;
   }).join('');
 }
 
-async function addAvailability() {
-  const date = document.getElementById('av-date').value;
-  const start = document.getElementById('av-start').value;
-  const end = document.getElementById('av-end').value;
+async function addDayOff() {
+  const date = document.getElementById('dayoff-date').value;
+  if (!date) return;
 
-  if (!date || !start || !end) return;
-  if (start >= end) {
-    alert('Horario de inicio deve ser antes do fim');
-    return;
-  }
-
-  const { data } = await db.rpc('admin_manage_availability', {
+  const { data } = await db.rpc('admin_manage_day_off', {
     pwd: adminPassword,
     action: 'insert',
-    av_date: date,
-    av_start: start,
-    av_end: end
+    p_date: date
   });
 
   if (data?.error) {
@@ -136,19 +192,20 @@ async function addAvailability() {
     return;
   }
 
-  loadAvailability();
+  document.getElementById('dayoff-date').value = '';
+  loadDaysOff();
 }
 
-async function deleteAvailability(id) {
-  if (!confirm('Remover esta disponibilidade?')) return;
+async function deleteDayOff(id) {
+  if (!confirm('Remover esta folga?')) return;
 
-  await db.rpc('admin_manage_availability', {
+  await db.rpc('admin_manage_day_off', {
     pwd: adminPassword,
     action: 'delete',
-    av_id: id
+    p_id: id
   });
 
-  loadAvailability();
+  loadDaysOff();
 }
 
 // --- Appointments ---
